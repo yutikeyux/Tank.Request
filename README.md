@@ -1,1 +1,1 @@
-# Desktop
+# değişiklikleri inceleyip kendinizde de uygulayabilirsiniz
