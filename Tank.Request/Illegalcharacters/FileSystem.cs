@@ -1,160 +1,225 @@
 ﻿using System;
-using System.Collections;
-using System.IO;
-using System.Text;
+using System.Collections.Generic;
+using System.Web;
+using System.Web.UI;
+using System.Web.UI.HtmlControls;
 
-namespace Tank.Request.Illegalcharacters
+// Ajax kütüphanesini dahil ediyoruz (Muhtemelen Ajax.NET Pro kullanılıyor)
+using Ajax;
+
+// İş mantığı katmanını dahil ediyoruz
+using Bussiness;
+
+namespace Count
 {
-	// Token: 0x02000086 RID: 134
-	public class FileSystem
-	{
-		// Token: 0x0600025E RID: 606 RVA: 0x00011620 File Offset: 0x0000F820
-		public FileSystem(string Path, string Directory, string Type)
-		{
-			this.initContent(Path);
-			this.initFileWatcher(Directory, Type);
-		}
+    // Token: 0x02000002 RID: 2
+    public class clickhandler : Page
+    {
+        // Sayfa formu
+        protected HtmlForm form1;
 
-		// Token: 0x0600025F RID: 607 RVA: 0x00011680 File Offset: 0x0000F880
-		private void initContent(string Path)
-		{
-			bool flag = File.Exists(Path);
-			if (flag)
-			{
-				this.filePath = Path;
-				StreamReader sr = new StreamReader(Path, Encoding.GetEncoding("GB2312"));
-				string str = "";
-				bool flag2 = this.contentList.Count > 0;
-				if (flag2)
-				{
-					this.contentList.Clear();
-				}
-				while (str != null)
-				{
-					str = sr.ReadLine();
-					bool flag3 = !string.IsNullOrEmpty(str);
-					if (flag3)
-					{
-						this.contentList.Add(str);
-					}
-				}
-				bool flag4 = str == null;
-				if (flag4)
-				{
-					sr.Close();
-				}
-			}
-		}
+        // Token: 0x06000001 RID: 1 RVA: 0x0000208C File Offset: 0x0000028C
+        // Sayfa ilk yüklendiğinde çalışır
+        protected void Page_Load(object sender, EventArgs e)
+        {
+            // Bu sınıfın Ajax istemlerine cevap verebilmesi için tür kaydı yapılır
+            Utility.RegisterTypeForAjax(typeof(click));
+        }
 
-		// Token: 0x06000260 RID: 608 RVA: 0x00011724 File Offset: 0x0000F924
-		private void initFileWatcher(string directory, string type)
-		{
-			bool flag = Directory.Exists(directory);
-			if (flag)
-			{
-				this.fileDirectory = directory;
-				this.fileType = type;
-				this.fileWatcher.Path = directory;
-				this.fileWatcher.Filter = type;
-				this.fileWatcher.NotifyFilter = (NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.LastAccess);
-				this.fileWatcher.EnableRaisingEvents = true;
-				this.fileWatcher.Changed += this.OnChanged;
-				this.fileWatcher.Renamed += FileSystem.OnRenamed;
-			}
-		}
+        // Token: 0x06000002 RID: 2 RVA: 0x00002FB4 File Offset: 0x000011B4
+        // Bu metot JavaScript tarafından (örn: onclick veya onunload olayında) asenkron çağrılır
+        [AjaxMethod]
+        public string Logoff(string App_Id, string Direct_Url, string Referry_Url, string Begin_time, string ScreenW, string ScreenH, string Color, string Flash)
+        {
+            HttpContext current = HttpContext.Current;
+            Dictionary<string, string> clientInfos = new Dictionary<string, string>();
 
-		// Token: 0x06000261 RID: 609 RVA: 0x000117B4 File Offset: 0x0000F9B4
-		public bool checkIllegalChar(string strRegName)
-		{
-			bool flag = false;
-			bool flag2 = !string.IsNullOrEmpty(strRegName);
-			if (flag2)
-			{
-				flag = this.checkChar(strRegName);
-			}
-			return flag;
-		}
+            try
+            {
+                // Uygulama Kimliği
+                clientInfos.Add("Application_Id", App_Id);
 
-		// Token: 0x06000262 RID: 610 RVA: 0x000117E0 File Offset: 0x0000F9E0
-		private bool checkChar(string strRegName)
-		{
-			bool flag = false;
-			foreach (object obj in this.contentList)
-			{
-				string strLine = (string)obj;
-				bool flag2 = !strLine.StartsWith("GM");
-				if (flag2)
-				{
-					foreach (char charl in strLine)
-					{
-						bool flag3 = strRegName.Contains(charl.ToString()) && charl.ToString() != " ";
-						if (flag3)
-						{
-							flag = true;
-							break;
-						}
-					}
-					bool flag4 = flag;
-					if (flag4)
-					{
-						break;
-					}
-				}
-				else
-				{
-					string[] keyword = strLine.Split(new char[]
-					{
-						'|'
-					});
-					foreach (string key in keyword)
-					{
-						bool flag5 = strRegName.Contains(key);
-						if (flag5)
-						{
-							flag = true;
-							break;
-						}
-					}
-					bool flag6 = flag;
-					if (flag6)
-					{
-						break;
-					}
-				}
-			}
-			return flag;
-		}
+                // --- IP ADRESİ TESPİTİ (GÜVENLİĞİ ARTIRILDI) ---
+                string ip = string.Empty;
 
-		// Token: 0x06000263 RID: 611 RVA: 0x00002CE8 File Offset: 0x00000EE8
-		private void OnChanged(object source, FileSystemEventArgs e)
-		{
-			this.UpdataContent();
-		}
+                // Eğer sunucu bir Load Balancer veya Proxy (Cloudflare vb.) arkasındaysa, 
+                // gerçek IP genellikle HTTP_X_FORWARDED_FOR başlığındadır.
+                if (current.Request.ServerVariables["HTTP_X_FORWARDED_FOR"] != null)
+                {
+                    // Virgülle ayrılmış olabilir, ilk adresi alıyoruz
+                    ip = current.Request.ServerVariables["HTTP_X_FORWARDED_FOR"].Split(',')[0].Trim();
+                }
+                else
+                {
+                    // Proxy yoksa doğrudan uzak IP adresini al
+                    ip = current.Request.UserHostAddress;
+                }
+                clientInfos.Add("IP", ip);
+                clientInfos.Add("IPAddress", ip);
 
-		// Token: 0x06000264 RID: 612 RVA: 0x00002CF2 File Offset: 0x00000EF2
-		private void UpdataContent()
-		{
-			this.initContent(this.filePath);
-		}
+                // --- TARAYICI VE CİHAZ BİLGİLERİ ---
+                string userAgent = (current.Request.UserAgent == null) ? "Bilinmiyor" : current.Request.UserAgent;
+                clientInfos.Add("UserAgent", userAgent);
 
-		// Token: 0x06000265 RID: 613 RVA: 0x00002670 File Offset: 0x00000870
-		private static void OnRenamed(object source, RenamedEventArgs e)
-		{
-		}
+                // İşlemci Bilgisi (Eski kafa ama tutuyoruz)
+                bool flag = current.Request.ServerVariables["HTTP_UA_CPU"] == null;
+                clientInfos.Add("CPU", flag ? "Bilinmiyor" : current.Request.ServerVariables["HTTP_UA_CPU"]);
 
-		// Token: 0x04000097 RID: 151
-		public ArrayList contentList = new ArrayList();
+                // İşletim Sistemi (Aşağıda güncellenmiş metod kullanılıyor)
+                clientInfos.Add("OperSystem", GetOSNameByUserAgent(userAgent));
 
-		// Token: 0x04000098 RID: 152
-		private FileSystemWatcher fileWatcher = new FileSystemWatcher();
+                // .NET Desteği
+                bool flag2 = current.Request.Browser.ClrVersion == null;
+                clientInfos.Add(".NETCLR", flag2 ? "Yok" : current.Request.Browser.ClrVersion.ToString());
 
-		// Token: 0x04000099 RID: 153
-		private string filePath = string.Empty;
+                // Tarayıcı Adı ve Versiyonu (Eski .NET yapısı bazen "Default" döner, biz bunu manuel güncelleyeceğiz)
+                string browserName = current.Request.Browser.Browser;
+                string browserVersion = current.Request.Browser.Version;
 
-		// Token: 0x0400009A RID: 154
-		private string fileDirectory = string.Empty;
+                // Eski BrowserCaps dosyaları Chrome/Edge'i tanımayabilir, UserAgent stringinden manuel kontrol ekliyoruz
+                if (userAgent.Contains("Edg/") && userAgent.Contains("Chrome"))
+                {
+                    browserName = "Edge (Chromium)";
+                }
+                else if (userAgent.Contains("Chrome") && !userAgent.Contains("Edg/"))
+                {
+                    browserName = "Chrome";
+                }
+                else if (userAgent.Contains("Firefox"))
+                {
+                    browserName = "Firefox";
+                }
+                else if (userAgent.Contains("Safari") && !userAgent.Contains("Chrome"))
+                {
+                    browserName = "Safari";
+                }
+                else if (userAgent.Contains("Opera") || userAgent.Contains("OPR"))
+                {
+                    browserName = "Opera";
+                }
 
-		// Token: 0x0400009B RID: 155
-		private string fileType = string.Empty;
-	}
+                clientInfos.Add("Browser", browserName + " " + browserVersion);
+
+                // --- TARAYICI ÖZELLİKLERİ (Legacy bilgiler korunuyor) ---
+                clientInfos.Add("ActiveX", current.Request.Browser.ActiveXControls ? "True" : "False"); // Artık hemen hemen hep False döner
+                clientInfos.Add("Cookies", current.Request.Browser.Cookies ? "True" : "False");
+                clientInfos.Add("CSS", current.Request.Browser.SupportsCss ? "True" : "False");
+
+                // Dil
+                if (current.Request.UserLanguages != null && current.Request.UserLanguages.Length > 0)
+                {
+                    clientInfos.Add("Language", current.Request.UserLanguages[0]);
+                }
+                else
+                {
+                    clientInfos.Add("Language", "tr-TR"); // Varsayılan
+                }
+
+                // --- CİHAZ TÜRÜ (Bilgisayar / Mobil) ---
+                // Eski metod: HTTP_ACCEPT içinde 'wap' arıyordu (Artık güvensiz).
+                // Yeni metod: UserAgent veya Request.Browser özelliklerini kullanıyoruz.
+                bool isMobile = current.Request.Browser.IsMobileDevice || userAgent.Contains("Mobile") || userAgent.Contains("Android") || userAgent.Contains("iPhone");
+                clientInfos.Add("Computer", isMobile ? "False" : "True"); // Computer = Masaüstü mü?
+
+                // Platform (Win32 vs Win64 vb.)
+                clientInfos.Add("Platform", current.Request.Browser.Platform);
+
+                // Eski windows versiyonları için kontroller
+                clientInfos.Add("Win16", current.Request.Browser.Win16 ? "True" : "False");
+                clientInfos.Add("Win32", current.Request.Browser.Win32 ? "True" : "False");
+
+                // --- BAŞKA HEADER BİLGİLERİ ---
+                bool flag5 = current.Request.ServerVariables["HTTP_ACCEPT_ENCODING"] == null;
+                clientInfos.Add("AcceptEncoding", flag5 ? "Yok" : current.Request.ServerVariables["HTTP_ACCEPT_ENCODING"]);
+
+                // --- İSTEMCİDEN GELEN PARAMETRELER ---
+                // Referrer: Hangi sayfadan gelindi?
+                clientInfos.Add("Referry", Referry_Url);
+
+                // Redirect: Tıklanacak gidilecek sayfa
+                clientInfos.Add("Redirect", Direct_Url);
+
+                // Zaman bilgisi
+                clientInfos.Add("TimeSpan", Begin_time.ToString());
+
+                // Ekran Bilgileri
+                clientInfos.Add("ScreenWidth", ScreenW);
+                clientInfos.Add("ScreenHeight", ScreenH);
+                clientInfos.Add("Color", Color);
+
+                // Flash (Artık teknoloji öldü ama parametre bekliyor olabilir)
+                clientInfos.Add("Flash", Flash);
+
+                // --- VERİTABANI KAYDI ---
+                // Hazırlanan sözlük (dictionary) iş katmanına gönderilir
+                CountBussiness.InsertContentCount(clientInfos);
+            }
+            catch (Exception ex)
+            {
+                // Hata olursa hata mesajını istemciye geri gönder
+                return ex.ToString();
+            }
+
+            // İşlem başarılı
+            return "ok";
+        }
+
+        // Token: 0x06000003 RID: 3 RVA: 0x00003380 File Offset: 0x00001580
+        // İşletim Sistemi tespit eden yardımcı metod (Güncellendi)
+        private static string GetOSNameByUserAgent(string userAgent)
+        {
+            if (string.IsNullOrEmpty(userAgent)) return "Bilinmiyor";
+
+            // Mobil Cihazlar
+            if (userAgent.Contains("Windows Phone")) return "Windows Phone";
+            if (userAgent.Contains("Android")) return "Android";
+            if (userAgent.Contains("iPad")) return "iPad (iOS)";
+            if (userAgent.Contains("iPhone") || userAgent.Contains("iPod")) return "iPhone (iOS)";
+
+            // Macintosh
+            if (userAgent.Contains("Macintosh") || userAgent.Contains("Mac OS X"))
+            {
+                // M1/M2 çipleri ayırt etmek için "Intel" kontrolü yapılabilir
+                return "macOS";
+            }
+
+            // Windows Sürümleri (NT çekirdeği üzerinden)
+            if (userAgent.Contains("Windows NT 10.0") || userAgent.Contains("Windows NT 11.0"))
+                return "Windows 10 / 11";
+            if (userAgent.Contains("Windows NT 6.3"))
+                return "Windows 8.1";
+            if (userAgent.Contains("Windows NT 6.2"))
+                return "Windows 8";
+            if (userAgent.Contains("Windows NT 6.1"))
+                return "Windows 7";
+            if (userAgent.Contains("Windows NT 6.0"))
+                return "Windows Vista";
+            if (userAgent.Contains("Windows NT 5.2"))
+                return "Windows Server 2003 / XP 64-bit";
+            if (userAgent.Contains("Windows NT 5.1"))
+                return "Windows XP";
+            if (userAgent.Contains("Windows NT 5.0"))
+                return "Windows 2000";
+            if (userAgent.Contains("Windows NT 4"))
+                return "Windows NT4";
+            if (userAgent.Contains("Windows 98") || userAgent.Contains("Win98"))
+                return "Windows 98";
+            if (userAgent.Contains("Windows 95"))
+                return "Windows 95";
+
+            // Linux ve Diğerleri
+            if (userAgent.Contains("Linux"))
+                return "Linux";
+            if (userAgent.Contains("Ubuntu"))
+                return "Ubuntu";
+            if (userAgent.Contains("CrOS"))
+                return "Chrome OS";
+            if (userAgent.Contains("Unix"))
+                return "UNIX";
+            if (userAgent.Contains("SunOS"))
+                return "SunOS";
+
+            return "Bilinmeyen İşletim Sistemi";
+        }
+    }
 }

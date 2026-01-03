@@ -156,7 +156,9 @@
     <Compile Include="giftsendlog.cs" />
     <Compile Include="Global.cs" />
     <Compile Include="gmtipallbyids.cs" />
-    <Compile Include="Illegalcharacters\FileSystem.cs" />
+    <Compile Include="Illegalcharacters\FileSystem.cs">
+      <SubType>ASPXCodeBehind</SubType>
+    </Compile>
     <Compile Include="IMFriendsBbs.cs" />
     <Compile Include="IMFriendsGood.cs" />
     <Compile Include="IMListLoad.cs" />
