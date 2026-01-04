@@ -38,7 +38,7 @@ namespace Tank.Request.CelebList
 			}
 			else
 			{
-				context.Response.Write("IP is not valid!" + context.Request.UserHostAddress);
+				context.Response.Write("Tabi Efendim!" + context.Request.UserHostAddress);
 			}
 		}
 

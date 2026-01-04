@@ -31,7 +31,7 @@ namespace Tank.Request
             else
             {
                 // Yetkili değilse hata mesajı döndür
-                context.Response.Write("IP is not valid!");
+                context.Response.Write("Tabi Efendim!");
             }
         }
 

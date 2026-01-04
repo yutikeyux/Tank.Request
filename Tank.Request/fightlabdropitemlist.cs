@@ -22,7 +22,7 @@ namespace Tank.Request
 			}
 			else
 			{
-				context.Response.Write("IP is not valid!");
+				context.Response.Write("Tabi Efendim!");
 			}
 		}
 

@@ -39,8 +39,8 @@ namespace Tank.Request
 				build.Append(petskillinfo.Bulid(context));
 				build.Append(petskilltemplateinfo.Bulid(context));
 				build.Append(pettemplateinfo.Bulid(context));
-				build.Append(CardUpdateCondition.Bulid(context));
-				build.Append(CardUpdateInfo.Bulid(context));
+				build.Append(CardUpdateCondition.Build(context));
+				build.Append(CardUpdateInfo.Build(context));
 				build.Append(activitysystemitems.Build(context));
 				build.Append(suittemplateinfolist.Build(context));
 				build.Append(DailyLeagueLevelList.Build(context));
@@ -50,7 +50,7 @@ namespace Tank.Request
 			}
 			else
 			{
-				context.Response.Write("IP is not valid!");
+				context.Response.Write("Tabi Efendim!");
 			}
 		}
 
